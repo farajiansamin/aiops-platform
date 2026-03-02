@@ -20,7 +20,7 @@ export interface ExtractedEntities {
   minutesAgo: number;
   symptoms: string[];
   isTerraform: boolean;
-  terraformResource?: string;
+  terraformResource: string | null;
   rawMessage: string;
   channel: string;
   threadTs: string;

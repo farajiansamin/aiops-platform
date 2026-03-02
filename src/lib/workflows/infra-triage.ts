@@ -24,7 +24,7 @@ const entityExtractionSchema = z.object({
   minutesAgo: z.number(),
   symptoms: z.array(z.string()),
   isTerraform: z.boolean(),
-  terraformResource: z.string().optional(),
+  terraformResource: z.string().nullable(),
 });
 
 export async function extractEntities(
