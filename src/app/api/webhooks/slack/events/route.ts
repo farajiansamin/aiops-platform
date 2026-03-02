@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { verifySlackRequest } from "@/lib/slack-verify";
 import { runInfraTriage } from "@/lib/workflows/infra-triage";
 import { getModel } from "@/lib/agent";
@@ -35,9 +35,15 @@ export async function POST(request: NextRequest) {
     !event.bot_id &&
     (INFRA_CHANNEL_IDS.has(event.channel) || INFRA_CHANNEL_IDS.size === 0)
   ) {
-    processInfraMessage(event).catch((err) =>
-      console.error("Error processing infra message:", err),
-    );
+    // `after()` keeps the serverless function alive after the response is sent
+    // so the triage workflow can complete (Vercel would otherwise kill it immediately)
+    after(async () => {
+      try {
+        await processInfraMessage(event);
+      } catch (err) {
+        console.error("Error processing infra message:", err);
+      }
+    });
   }
 
   return NextResponse.json({ ok: true });

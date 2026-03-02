@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { generateObject, generateText } from "ai";
 import { z } from "zod/v4";
 import { verifySlackRequest } from "@/lib/slack-verify";
@@ -43,9 +43,13 @@ export async function POST(request: NextRequest) {
   }
   const payload = JSON.parse(payloadStr);
 
-  handleInteraction(payload).catch((err) =>
-    console.error("Error handling interaction:", err),
-  );
+  after(async () => {
+    try {
+      await handleInteraction(payload);
+    } catch (err) {
+      console.error("Error handling interaction:", err);
+    }
+  });
 
   return NextResponse.json({ ok: true });
 }
