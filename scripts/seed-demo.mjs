@@ -172,6 +172,31 @@ async function seedImpactedUsers() {
   console.log(`    Breakdown: 3 enterprise, 3 business, 6 free`);
 }
 
+async function seedServiceRepos() {
+  console.log("\n=== Seeding service_repos ===\n");
+
+  const mappings = [
+    { serviceName: "payment-service", repoFullName: "farajiansamin/payment-service" },
+  ];
+
+  for (const m of mappings) {
+    const existing = await pool.query(
+      "SELECT id FROM service_repos WHERE service_name = $1 AND repo_full_name = $2",
+      [m.serviceName, m.repoFullName]
+    );
+    if (existing.rows.length > 0) {
+      console.log(`  Already exists: ${m.serviceName} → ${m.repoFullName}`);
+    } else {
+      await pool.query(
+        `INSERT INTO service_repos (id, service_name, repo_full_name, created_at)
+         VALUES (gen_random_uuid(), $1, $2, NOW())`,
+        [m.serviceName, m.repoFullName]
+      );
+      console.log(`  ✓ Mapped: ${m.serviceName} → ${m.repoFullName}`);
+    }
+  }
+}
+
 // ─── Main ────────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -181,12 +206,14 @@ async function main() {
   try {
     await seedIssueEmbeddings();
     await seedImpactedUsers();
+    await seedServiceRepos();
 
     console.log("\n=== Done! ===");
     console.log("\nSeeded data:");
     console.log("  - 3 issue embeddings (order-processing, checkout-service, notification-service)");
     console.log("  - 1 demo incident (demo-inc-001)");
     console.log("  - 12 impacted users (3 enterprise, 3 business, 6 free)");
+    console.log("  - 1 service-repo mapping (payment-service → farajiansamin/payment-service)");
     console.log("\nYou can now run the demo scenarios.");
   } catch (err) {
     console.error("Seed failed:", err);

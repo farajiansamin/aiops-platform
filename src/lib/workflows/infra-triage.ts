@@ -303,12 +303,30 @@ async function searchAndFetchFAQContent(
 ): Promise<
   Array<{ id: string; title: string; url: string; content?: string }>
 > {
-  const searchResult = await searchPages(
-    `text ~ "${serviceName}" AND type=page`,
-    5,
-  );
+  // Try multiple CQL variants to handle "payment service" vs "payment-service"
+  const nameVariants = new Set([
+    serviceName,
+    serviceName.replace(/\s+/g, "-"),
+    serviceName.replace(/-/g, " "),
+  ]);
 
-  if (searchResult.results.length === 0) return [];
+  let searchResult = { results: [] as Array<{ id: string; title: string; _links: { webui: string } }> };
+  for (const variant of nameVariants) {
+    try {
+      searchResult = await searchPages(
+        `(title ~ "${variant}" OR text ~ "${variant}") AND type=page`,
+        5,
+      );
+      if (searchResult.results.length > 0) break;
+    } catch (err) {
+      console.error(`Confluence search failed for "${variant}":`, err);
+    }
+  }
+
+  if (searchResult.results.length === 0) {
+    console.log(`Confluence: no FAQ pages found for service "${serviceName}" (tried: ${[...nameVariants].join(", ")})`);
+    return [];
+  }
 
   const results: Array<{
     id: string;
