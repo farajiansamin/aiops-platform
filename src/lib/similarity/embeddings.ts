@@ -55,7 +55,7 @@ async function getEmbeddingModel(): Promise<Parameters<typeof embed>[0]["model"]
     const google = createGoogleGenerativeAI({
       apiKey: env.GOOGLE_GENERATIVE_AI_API_KEY,
     });
-    return google.textEmbeddingModel("text-embedding-004") as any;
+    return google.textEmbeddingModel("gemini-embedding-001") as any;
   }
   throw new Error(
     "No embedding model available. Set OPENAI_API_KEY or GOOGLE_GENERATIVE_AI_API_KEY for embedding support.",

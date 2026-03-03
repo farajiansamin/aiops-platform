@@ -9,7 +9,7 @@
  * Usage:
  *   1. Copy .env.local values or export them:
  *        export POSTGRES_URL="postgresql://..."
- *        export OPENAI_API_KEY="sk-..."   (or GOOGLE_GENERATIVE_AI_API_KEY)
+ *        export GOOGLE_GENERATIVE_AI_API_KEY="..."
  *
  *   2. Run:
  *        node scripts/seed-demo.mjs
@@ -30,36 +30,22 @@ const pool = new Pool({ connectionString: POSTGRES_URL, ssl: { rejectUnauthorize
 // ─── Embedding generation ────────────────────────────────────────────────────
 
 async function generateEmbedding(text) {
-  if (process.env.OPENAI_API_KEY) {
-    const res = await fetch("https://api.openai.com/v1/embeddings", {
+  const key = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+  if (!key) {
+    throw new Error("GOOGLE_GENERATIVE_AI_API_KEY is required. Export it before running this script.");
+  }
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=${key}`,
+    {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ model: "text-embedding-3-small", input: text }),
-    });
-    if (!res.ok) throw new Error(`OpenAI embedding error: ${res.status} ${await res.text()}`);
-    const data = await res.json();
-    return data.data[0].embedding;
-  }
-
-  if (process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
-    const key = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${key}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: { parts: [{ text }] } }),
-      }
-    );
-    if (!res.ok) throw new Error(`Google embedding error: ${res.status} ${await res.text()}`);
-    const data = await res.json();
-    return data.embedding.values;
-  }
-
-  throw new Error("Set OPENAI_API_KEY or GOOGLE_GENERATIVE_AI_API_KEY for embeddings.");
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: { parts: [{ text }] } }),
+    }
+  );
+  if (!res.ok) throw new Error(`Google embedding error: ${res.status} ${await res.text()}`);
+  const data = await res.json();
+  return data.embedding.values;
 }
 
 // ─── Historical issues to seed ───────────────────────────────────────────────
