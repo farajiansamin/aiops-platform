@@ -113,18 +113,23 @@ async function handleSearchPreviousIssues(
     { threadTs },
   );
 
-  const model = getModel();
-  const entities = await extractEntities(
-    `${serviceName} is having issues`,
-    model,
-  );
+  // Fetch the original message from the thread to get full symptom context
+  let originalMessage = `${serviceName} is having issues`;
+  try {
+    const threadMsgs = await fetchThreadReplies(channel, threadTs);
+    if (threadMsgs.length > 0 && threadMsgs[0].text) {
+      originalMessage = threadMsgs[0].text;
+    }
+  } catch {
+    // Fall back to generic message
+  }
 
-  // Find semantically similar past issues using embedding similarity.
-  // This matches by error pattern, not service name — so an OOM on
-  // service-A will match a past OOM on service-B.
+  const model = getModel();
+  const entities = await extractEntities(originalMessage, model);
+
   const similarIssues = await findSimilarIssues({
     ...entities,
-    rawMessage: serviceName,
+    rawMessage: originalMessage,
     channel,
     threadTs,
     userId: "",
@@ -257,15 +262,22 @@ async function handleDraftFAQFromSimilar(
   threadTs: string,
   requestedBy: string,
 ) {
+  let originalMessage = `${serviceName} is having issues`;
+  try {
+    const threadMsgs = await fetchThreadReplies(channel, threadTs);
+    if (threadMsgs.length > 0 && threadMsgs[0].text) {
+      originalMessage = threadMsgs[0].text;
+    }
+  } catch {
+    // Fall back to generic message
+  }
+
   const model = getModel();
-  const entities = await extractEntities(
-    `${serviceName} is having issues`,
-    model,
-  );
+  const entities = await extractEntities(originalMessage, model);
 
   const similarIssues = await findSimilarIssues({
     ...entities,
-    rawMessage: serviceName,
+    rawMessage: originalMessage,
     channel,
     threadTs,
     userId: "",

@@ -3,7 +3,7 @@ import { db, schema } from "@/lib/db";
 import { env } from "@/lib/env";
 import type { ExtractedEntities } from "@/lib/workflows/types";
 
-const SIMILARITY_THRESHOLD = 0.78;
+const SIMILARITY_THRESHOLD = 0.65;
 
 function cosineSimilarity(a: number[], b: number[]): number {
   if (a.length !== b.length) return 0;
