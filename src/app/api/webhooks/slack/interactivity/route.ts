@@ -21,7 +21,7 @@ import {
 } from "@/lib/providers/slack/client";
 import { getIncident, getIncidentTimeline } from "@/lib/providers/rootly/client";
 import { listRecentPRs } from "@/lib/providers/github/client";
-import { searchPages } from "@/lib/providers/confluence/client";
+import { searchPages, createPage } from "@/lib/providers/confluence/client";
 import { findSimilarIssues } from "@/lib/similarity/embeddings";
 import { createFAQ } from "@/lib/db/queries/faqs";
 import { db, schema } from "@/lib/db";
@@ -177,14 +177,18 @@ async function handleSearchPreviousIssues(
   // an overall suggested fix based on the patterns
   const conversationContext = issuesWithConversations
     .map((ic, i) => {
-      const repliesText =
-        ic.replies.length > 0
-          ? ic.replies
-              .slice(0, 10)
-              .map((r) => `  - ${r.user}: ${r.text}`)
-              .join("\n")
-          : "  (no replies found)";
-      return `--- Issue ${i + 1} (${Math.round(ic.issue.similarity * 100)}% match, service: ${ic.issue.service}) ---\nDescription: ${ic.issue.description}\nReplies:\n${repliesText}`;
+      let resolutionText: string;
+      if (ic.replies.length > 0) {
+        resolutionText = "Replies:\n" + ic.replies
+          .slice(0, 10)
+          .map((r) => `  - ${r.user}: ${r.text}`)
+          .join("\n");
+      } else if (ic.issue.resolvedVia) {
+        resolutionText = `Known resolution: ${ic.issue.resolvedVia}`;
+      } else {
+        resolutionText = "  (no resolution recorded)";
+      }
+      return `--- Issue ${i + 1} (${Math.round(ic.issue.similarity * 100)}% match, service: ${ic.issue.service}) ---\nDescription: ${ic.issue.description}\n${resolutionText}`;
     })
     .join("\n\n");
 
@@ -236,7 +240,9 @@ Return:
       threadTs: ic.issue.threadTs,
       createdAt: ic.issue.createdAt,
       fixSummary:
-        perIssueSummaries.find((s) => s.issueIndex === i)?.fixSummary ?? null,
+        perIssueSummaries.find((s) => s.issueIndex === i)?.fixSummary
+        ?? ic.issue.resolvedVia
+        ?? null,
     }));
 
   const blocks = buildSimilarIssuesResult({
@@ -368,9 +374,51 @@ If threads contained specific commands or kubectl/terraform/docker commands, inc
 
   const titleMatch = faqContent.match(/^#?\s*(?:Title:\s*)?(.+)$/m);
   const title =
-    titleMatch?.[1]?.trim() ?? `FAQ: ${serviceName} troubleshooting`;
+    titleMatch?.[1]?.trim() ?? `${serviceName}: Troubleshooting Runbook`;
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  // Convert markdown content to basic Confluence storage format
+  const confluenceBody = faqContent
+    .split("\n\n")
+    .map((block) => {
+      const trimmed = block.trim();
+      if (trimmed.startsWith("```")) {
+        const code = trimmed.replace(/^```\w*\n?/, "").replace(/\n?```$/, "");
+        return `<ac:structured-macro ac:name="code"><ac:plain-text-body><![CDATA[${code}]]></ac:plain-text-body></ac:structured-macro>`;
+      }
+      if (trimmed.startsWith("# ")) return `<h1>${trimmed.slice(2)}</h1>`;
+      if (trimmed.startsWith("## ")) return `<h2>${trimmed.slice(3)}</h2>`;
+      if (trimmed.startsWith("### ")) return `<h3>${trimmed.slice(4)}</h3>`;
+      const html = trimmed
+        .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+        .replace(/`(.+?)`/g, "<code>$1</code>")
+        .replace(/\n/g, "<br/>");
+      return `<p>${html}</p>`;
+    })
+    .join("\n");
+
+  // Create a Confluence page
+  const confluenceHost = (process.env.CONFLUENCE_HOST ?? process.env.ATLASSIAN_HOST ?? "").replace(/^https?:\/\//, "");
+  let confluencePageUrl: string | undefined;
+
+  try {
+    // Find the space key from an existing page
+    const spaceLookup = await searchPages("type=page", 1);
+    const spaceKey = spaceLookup.results[0]?.space?.key;
+
+    if (spaceKey) {
+      const page = await createPage({
+        spaceKey,
+        title,
+        body: confluenceBody,
+      });
+      const webuiPath = page._links.webui;
+      confluencePageUrl = webuiPath.startsWith("http")
+        ? webuiPath
+        : `https://${confluenceHost}/wiki${webuiPath}`;
+    }
+  } catch (err) {
+    console.error("Failed to create Confluence page:", err);
+  }
 
   const faq = await createFAQ({
     title,
@@ -391,47 +439,75 @@ If threads contained specific commands or kubectl/terraform/docker commands, inc
       serviceName,
       similarIssueCount: similarIssues.length,
       threadConversationCount: threadConversations.length,
+      confluencePageUrl,
     },
   });
 
-  await postMessage(
-    channel,
-    `FAQ draft created for "${serviceName}" — review and edit before publishing.`,
+  const blocks: Record<string, unknown>[] = [
     {
-      threadTs,
-      blocks: [
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `:memo: *FAQ Page Created* (requested by <@${requestedBy}>)\nBased on *${similarIssues.length} similar past issues* and their resolutions.`,
+      },
+    },
+  ];
+
+  if (confluencePageUrl) {
+    blocks.push({
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `:page_facing_up: *<${confluencePageUrl}|${title}>*\nPlease review and edit the FAQ on Confluence to make sure the fix steps are accurate before sharing with the team.`,
+      },
+    });
+    blocks.push({
+      type: "actions",
+      elements: [
         {
-          type: "section",
+          type: "button",
           text: {
-            type: "mrkdwn",
-            text: `:memo: *FAQ Draft Created* (requested by <@${requestedBy}>)\nBased on *${similarIssues.length} similar past issues* and *${threadConversations.length} resolution conversations*.`,
+            type: "plain_text",
+            text: "Review FAQ on Confluence",
+            emoji: true,
           },
-        },
-        {
-          type: "section",
-          text: {
-            type: "mrkdwn",
-            text: `*${title}*\n\`\`\`${faqContent.slice(0, 500)}${faqContent.length > 500 ? "..." : ""}\`\`\``,
-          },
-        },
-        {
-          type: "actions",
-          elements: [
-            {
-              type: "button",
-              text: {
-                type: "plain_text",
-                text: "Review & Edit FAQ",
-                emoji: true,
-              },
-              url: `${appUrl}/faq/${faq.id}`,
-              action_id: "review_faq_draft",
-              style: "primary",
-            },
-          ],
+          url: confluencePageUrl,
+          action_id: "review_faq_confluence",
+          style: "primary",
         },
       ],
-    },
+    });
+  } else {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+    blocks.push({
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `*${title}*\n\`\`\`${faqContent.slice(0, 500)}${faqContent.length > 500 ? "..." : ""}\`\`\``,
+      },
+    });
+    blocks.push({
+      type: "actions",
+      elements: [
+        {
+          type: "button",
+          text: {
+            type: "plain_text",
+            text: "Review & Edit FAQ",
+            emoji: true,
+          },
+          url: `${appUrl}/faq/${faq.id}`,
+          action_id: "review_faq_draft",
+          style: "primary",
+        },
+      ],
+    });
+  }
+
+  await postMessage(
+    channel,
+    `FAQ page created for "${serviceName}" — please review and edit.`,
+    { threadTs, blocks },
   );
 }
 

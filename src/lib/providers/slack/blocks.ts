@@ -265,31 +265,33 @@ export function buildSimilarIssuesResult(params: {
     });
   }
 
-  // Offer to draft a FAQ
-  blocks.push({ type: "divider" });
-  blocks.push({
-    type: "section",
-    text: {
-      type: "mrkdwn",
-      text: `:memo: This issue pattern has appeared *${params.issues.length} time${params.issues.length > 1 ? "s" : ""}* before. Would you like to add it to the FAQ so the fix is documented for next time?`,
-    },
-  });
-  blocks.push({
-    type: "actions",
-    elements: [
-      {
-        type: "button",
-        text: {
-          type: "plain_text",
-          text: "Yes, Draft a FAQ Entry",
-          emoji: true,
-        },
-        action_id: "draft_faq_from_similar",
-        value: params.serviceName,
-        style: "primary",
+  // Offer to draft a FAQ when pattern has been seen at least twice
+  if (params.issues.length >= 2) {
+    blocks.push({ type: "divider" });
+    blocks.push({
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `:memo: This issue pattern has appeared *${params.issues.length} times* before. Would you like me to create a FAQ page so the fix is documented for next time?`,
       },
-    ],
-  });
+    });
+    blocks.push({
+      type: "actions",
+      elements: [
+        {
+          type: "button",
+          text: {
+            type: "plain_text",
+            text: "Yes, Create FAQ Page",
+            emoji: true,
+          },
+          action_id: "draft_faq_from_similar",
+          value: params.serviceName,
+          style: "primary",
+        },
+      ],
+    });
+  }
 
   return blocks;
 }

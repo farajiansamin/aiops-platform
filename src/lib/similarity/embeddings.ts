@@ -109,12 +109,22 @@ export async function findSimilarIssues(
     .limit(500);
 
   const results: SimilarIssue[] = [];
+  const seenDescriptions = new Set<string>();
+
   for (const stored of storedIssues) {
+    // Skip self-match (same thread as the current request)
+    if (stored.threadTs && stored.threadTs === entities.threadTs) continue;
+
     const similarity = cosineSimilarity(
       currentEmbedding,
       stored.embedding as number[],
     );
     if (similarity >= SIMILARITY_THRESHOLD) {
+      // Deduplicate by description (first 100 chars)
+      const descKey = stored.description.slice(0, 100);
+      if (seenDescriptions.has(descKey)) continue;
+      seenDescriptions.add(descKey);
+
       results.push({
         id: stored.id,
         description: stored.description,
