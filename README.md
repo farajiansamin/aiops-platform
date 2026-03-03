@@ -12,11 +12,11 @@ AI-powered infrastructure operations assistant built with Next.js, Vercel AI SDK
 
 Imagine a help request lands in your #infrastructure channel: "The payment service is throwing 500 errors." The on-call engineer has to open five different tabs — scrolling through alerts, checking Rootly for active incidents, searching GitHub for recent merges, and digging through months of Slack history hoping someone has seen this before. That investigation takes 30-45 minutes, and the answer is usually buried in a thread reply. Every time an engineer leaves the team, that knowledge leaves with them.
 
-![The manual triage problem — 30-45 minutes across 5 tools](/Users/samin.farajian/.cursor/projects/Users-samin-farajian-AIOps/assets/digram-problem-1-0bb7c196-0cdc-48f1-ab8e-06f189390497.png)
+![The manual triage problem — 30-45 minutes across 5 tools](./docs/images/problem-manual-triage.png)
 
 Then there's the other side of incidents — the aftermath. After a major outage, the team rushes to fix it. Once things calm down, the same questions come up: How many customers were affected? Which tier? How exactly were they impacted? Answering that means manually querying databases, cross-referencing timestamps, and piecing together which users hit the broken endpoint. Then comes writing a clear message to those customers. Under pressure, this work is slow, error-prone, and often delayed.
 
-![Incident aftermath — the manual communication challenge](/Users/samin.farajian/.cursor/projects/Users-samin-farajian-AIOps/assets/inci-3d2125b9-bdac-4e92-96d3-51192465666f.png)
+![Incident aftermath — the manual communication challenge](./docs/images/incident-aftermath.png)
 
 ### Where Rootly Fits — and Where the Gap Is
 
@@ -34,7 +34,7 @@ AIOps fills that gap. It integrates *with* Rootly (querying active incidents, re
 
 ## Two Core Use Cases
 
-![Use Case 1: Infrastructure Triage — Use Case 2: Customer Impact & Communication](/Users/samin.farajian/.cursor/projects/Users-samin-farajian-AIOps/assets/usecase-5f98cec7-9469-4400-9c53-d2ef0de84f04.png)
+![Use Case 1: Infrastructure Triage — Use Case 2: Customer Impact & Communication](./docs/images/use-cases.png)
 
 ### Use Case 1: Infrastructure Triage & Knowledge Management
 
@@ -47,11 +47,11 @@ When a help request appears in #infrastructure, the agent investigates in second
 5. **Find Similar Past Issues** — Uses embedding-based semantic search across past Slack help requests, even across different services.
 6. **Draft New FAQ** — If the same issue keeps coming up without documentation, the agent drafts a new Confluence FAQ page for human review.
 
-![Help requests in #infrastructure](/Users/samin.farajian/.cursor/projects/Users-samin-farajian-AIOps/assets/helprequests-da1b579f-55c6-4a6d-b5b9-c29f1327eeb6.png)
+![Help requests in #infrastructure](./docs/images/slack-help-requests.png)
 
-![Agent triage reply in Slack thread](/Users/samin.farajian/.cursor/projects/Users-samin-farajian-AIOps/assets/Screenshot_2026-03-02_at_9.11.31_PM-f0b93448-011e-4ae1-9ad6-4114cbd3cb39.png)
+![Agent triage reply in Slack thread](./docs/images/slack-triage-reply.png)
 
-![Thread showing how a fix was found and shared](/Users/samin.farajian/.cursor/projects/Users-samin-farajian-AIOps/assets/reply-help-request-6fd87210-97c8-4306-a9bb-cc421980c389.png)
+![Thread showing how a fix was found and shared](./docs/images/thread-resolution.png)
 
 ### Use Case 2: Incident Impact & Customer Communication
 
@@ -62,13 +62,13 @@ When a high-severity incident is declared via Rootly:
 3. **Draft Notification** — Writes a tailored customer email using incident context from Rootly and impact data from the database.
 4. **Human Review** — The team reviews tone, verifies data, and sends from the web dashboard.
 
-![Incident lifecycle workflows — customer communication and post-mortem](/Users/samin.farajian/.cursor/projects/Users-samin-farajian-AIOps/assets/Generated_image-4b1b191b-e780-4ef9-8893-840053ec12e7.png)
+![Incident lifecycle workflows — customer communication and post-mortem](./docs/images/incident-lifecycle.png)
 
 ---
 
 ## Architecture
 
-![System architecture — entry points, integrations, and outputs](/Users/samin.farajian/.cursor/projects/Users-samin-farajian-AIOps/assets/ARCHITE-150ed06f-41e2-49c4-9720-2d36ce604735.png)
+![System architecture — entry points, integrations, and outputs](./docs/images/architecture.png)
 
 The platform sits between two entry points (**Slack** and **Rootly**) and multiple outputs (Slack replies, customer emails, post-mortem documents). Webhook handlers trigger three core workflows: Infra Triage, Customer Impact, and Post-Mortem Drafting.
 
@@ -81,7 +81,7 @@ Integrations:
 
 **Slack App** handles real-time triage — the agent replies in threads with interactive summaries and action buttons. **Web UI** handles deeper work — editing FAQ drafts, reviewing customer impact tables, adjusting email tone, and approving post-mortems.
 
-![Web dashboard — pending approvals and recent incidents](/Users/samin.farajian/.cursor/projects/Users-samin-farajian-AIOps/assets/Screenshot_2026-03-02_at_10.52.52_PM-1d5deac7-46dd-448e-96c5-424849ec53a9.png)
+![Web dashboard — pending approvals and recent incidents](./docs/images/dashboard.png)
 
 ---
 
