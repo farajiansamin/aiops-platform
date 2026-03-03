@@ -6,7 +6,8 @@ function authHeader(): string {
 }
 
 function baseUrl(): string {
-  const host = env.CONFLUENCE_HOST ?? env.ATLASSIAN_HOST;
+  const raw = env.CONFLUENCE_HOST ?? env.ATLASSIAN_HOST ?? "";
+  const host = raw.replace(/^https?:\/\//, "");
   return `https://${host}/wiki/rest/api`;
 }
 

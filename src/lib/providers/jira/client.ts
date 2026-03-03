@@ -6,7 +6,8 @@ function authHeader(): string {
 }
 
 function baseUrl(): string {
-  return `https://${env.ATLASSIAN_HOST}/rest/api/3`;
+  const host = (env.ATLASSIAN_HOST ?? "").replace(/^https?:\/\//, "");
+  return `https://${host}/rest/api/3`;
 }
 
 async function fetchJira<T>(
