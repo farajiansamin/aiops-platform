@@ -23,6 +23,7 @@ function slackMessagePermalink(channel: string, ts: string): string {
 export function buildTriageResponse(params: {
   serviceName: string;
   alertCount: number;
+  alertChannelId?: string;
   hasRecentChanges: boolean;
   changeCount?: number;
   hasFAQMatch: boolean;
@@ -68,9 +69,10 @@ export function buildTriageResponse(params: {
     `I see you're having issues with *${params.serviceName}*.`,
   ];
   if (params.alertCount > 0) {
-    summaryParts.push(
-      `Found *${params.alertCount} related alerts* that didn't trigger an incident.`,
-    );
+    const alertLink = params.alertChannelId
+      ? `Found *${params.alertCount} related alerts* in <#${params.alertChannelId}> that didn't trigger an incident.`
+      : `Found *${params.alertCount} related alerts* that didn't trigger an incident.`;
+    summaryParts.push(alertLink);
   }
   if (params.hasRecentChanges) {
     summaryParts.push(

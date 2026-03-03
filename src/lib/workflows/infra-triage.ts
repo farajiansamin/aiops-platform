@@ -156,9 +156,12 @@ export async function runInfraTriage(
   // If NOT found, the agent explicitly says "No similar FAQ entry found"
   // and offers a "Search Previous Related Issues" button.
   if (env.SLACK_BOT_TOKEN) {
+    const alertChannelId = rawAlerts.length > 0 ? rawAlerts[0].channel : undefined;
+
     const blocks = buildTriageResponse({
       serviceName: entities.service,
       alertCount: context.alertCorrelation?.relatedAlertCount ?? 0,
+      alertChannelId,
       hasRecentChanges: context.recentChanges.length > 0,
       changeCount: context.recentChanges.length,
       hasFAQMatch: context.faqMatches.length > 0,
@@ -243,10 +246,10 @@ async function fetchHistoricalThreadsWithReplies(
 
 async function fetchAlertChannelHistory(
   minutesAgo: number,
-): Promise<Array<{ text: string; ts: string }>> {
+): Promise<Array<{ text: string; ts: string; channel: string }>> {
   const alertChannels = await db.select().from(schema.alertChannels);
 
-  const allAlerts: Array<{ text: string; ts: string }> = [];
+  const allAlerts: Array<{ text: string; ts: string; channel: string }> = [];
   const oldest = String(
     Math.floor(Date.now() / 1000) - Math.max(minutesAgo, 60) * 60,
   );
@@ -255,7 +258,7 @@ async function fetchAlertChannelHistory(
     try {
       const history = await fetchChannelHistory(ch.channelId, oldest, 200);
       allAlerts.push(
-        ...history.messages.map((m) => ({ text: m.text, ts: m.ts })),
+        ...history.messages.map((m) => ({ text: m.text, ts: m.ts, channel: ch.channelId })),
       );
     } catch (err) {
       console.error(`Failed to fetch alerts from ${ch.channelName}:`, err);
