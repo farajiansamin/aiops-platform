@@ -341,6 +341,14 @@ async function searchAndFetchFAQContent(
     return [];
   }
 
+  const confluenceHost = (env.CONFLUENCE_HOST ?? env.ATLASSIAN_HOST ?? "").replace(/^https?:\/\//, "");
+  const wikiBase = `https://${confluenceHost}/wiki`;
+
+  function fullUrl(webuiPath: string): string {
+    if (webuiPath.startsWith("http")) return webuiPath;
+    return `${wikiBase}${webuiPath}`;
+  }
+
   const results: Array<{
     id: string;
     title: string;
@@ -364,14 +372,14 @@ async function searchAndFetchFAQContent(
     results.push({
       id: bestMatch.id,
       title: bestMatch.title,
-      url: bestMatch._links.webui,
+      url: fullUrl(bestMatch._links.webui),
       content: plainText || undefined,
     });
   } catch {
     results.push({
       id: bestMatch.id,
       title: bestMatch.title,
-      url: bestMatch._links.webui,
+      url: fullUrl(bestMatch._links.webui),
     });
   }
 
@@ -379,7 +387,7 @@ async function searchAndFetchFAQContent(
     results.push({
       id: p.id,
       title: p.title,
-      url: p._links.webui,
+      url: fullUrl(p._links.webui),
     });
   }
 
