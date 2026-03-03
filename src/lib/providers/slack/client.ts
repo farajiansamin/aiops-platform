@@ -76,13 +76,37 @@ export async function fetchChannelHistory(
     limit,
     inclusive: true,
   });
-  const messages: SlackMessage[] = (result.messages ?? []).map((m) => ({
-    ts: m.ts ?? "",
-    text: m.text ?? "",
-    user: m.user ?? "",
-    channel,
-    threadTs: m.thread_ts,
-  }));
+
+  const SYSTEM_SUBTYPES = new Set([
+    "channel_join",
+    "channel_leave",
+    "channel_topic",
+    "channel_purpose",
+    "channel_name",
+    "channel_archive",
+    "channel_unarchive",
+    "group_join",
+    "group_leave",
+    "group_topic",
+    "group_purpose",
+    "group_name",
+    "pinned_item",
+    "unpinned_item",
+  ]);
+
+  const messages: SlackMessage[] = (result.messages ?? [])
+    .filter((m) => {
+      const sub = (m as Record<string, unknown>).subtype as string | undefined;
+      return !sub || !SYSTEM_SUBTYPES.has(sub);
+    })
+    .map((m) => ({
+      ts: m.ts ?? "",
+      text: m.text ?? "",
+      user: m.user ?? "",
+      channel,
+      threadTs: m.thread_ts,
+    }));
+
   return {
     messages,
     hasMore: result.has_more ?? false,

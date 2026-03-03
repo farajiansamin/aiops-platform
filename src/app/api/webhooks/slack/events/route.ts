@@ -29,12 +29,14 @@ export async function POST(request: NextRequest) {
 
   const event = payload.event;
 
-  if (
+  const isTopLevelHumanMessage =
     event.type === "message" &&
     !event.subtype &&
     !event.bot_id &&
-    (INFRA_CHANNEL_IDS.has(event.channel) || INFRA_CHANNEL_IDS.size === 0)
-  ) {
+    !event.thread_ts &&
+    (INFRA_CHANNEL_IDS.has(event.channel) || INFRA_CHANNEL_IDS.size === 0);
+
+  if (isTopLevelHumanMessage) {
     // `after()` keeps the serverless function alive after the response is sent
     // so the triage workflow can complete (Vercel would otherwise kill it immediately)
     after(async () => {
