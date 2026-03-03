@@ -1,14 +1,95 @@
 # AIOps Platform
 
-AI-powered infrastructure operations platform built with Next.js, Vercel AI SDK, and a hybrid MCP-ready architecture. Integrates with Slack, Rootly, JIRA, Confluence, and GitHub.
+**[Open Live App](https://aiops-platform.vercel.app)** | **[Watch Demo Video](./AIOps.mp4)**
+
+AI-powered infrastructure operations assistant built with Next.js, Vercel AI SDK, and a hybrid MCP-ready architecture. Integrates with Slack, Rootly, Confluence, GitHub, and JIRA.
+
+---
+
+## Why This Exists
+
+### The Problem
+
+Imagine a help request lands in your #infrastructure channel: "The payment service is throwing 500 errors." The on-call engineer has to open five different tabs — scrolling through alerts, checking Rootly for active incidents, searching GitHub for recent merges, and digging through months of Slack history hoping someone has seen this before. That investigation takes 30-45 minutes, and the answer is usually buried in a thread reply. Every time an engineer leaves the team, that knowledge leaves with them.
+
+![The manual triage problem — 30-45 minutes across 5 tools](/Users/samin.farajian/.cursor/projects/Users-samin-farajian-AIOps/assets/digram-problem-1-0bb7c196-0cdc-48f1-ab8e-06f189390497.png)
+
+Then there's the other side of incidents — the aftermath. After a major outage, the team rushes to fix it. Once things calm down, the same questions come up: How many customers were affected? Which tier? How exactly were they impacted? Answering that means manually querying databases, cross-referencing timestamps, and piecing together which users hit the broken endpoint. Then comes writing a clear message to those customers. Under pressure, this work is slow, error-prone, and often delayed.
+
+![Incident aftermath — the manual communication challenge](/Users/samin.farajian/.cursor/projects/Users-samin-farajian-AIOps/assets/inci-3d2125b9-bdac-4e92-96d3-51192465666f.png)
+
+### Where Rootly Fits — and Where the Gap Is
+
+[Rootly](https://rootly.com/) orchestrates the incident lifecycle: declaring incidents, assigning commanders, tracking severity, and generating timelines. But Rootly operates at the *incident* level — it kicks in once something has been formally declared. The gap is everything that happens *before* and *around* an incident:
+
+- A help request in Slack that hasn't escalated yet — Rootly doesn't see it.
+- Correlating that request with noisy alerts in a separate channel — Rootly doesn't do this.
+- Searching past Slack threads for how the team fixed the same problem before — outside Rootly's scope.
+- Checking if a recent GitHub merge caused the regression — outside Rootly's scope.
+- Drafting customer communications based on blast radius data — Rootly tracks incidents, not customer impact at the user level.
+
+AIOps fills that gap. It integrates *with* Rootly (querying active incidents, receiving webhooks) while extending into areas Rootly doesn't cover: pre-incident triage, cross-tool correlation, knowledge retrieval, customer impact analysis, and post-mortem drafting.
+
+---
+
+## Two Core Use Cases
+
+![Use Case 1: Infrastructure Triage — Use Case 2: Customer Impact & Communication](/Users/samin.farajian/.cursor/projects/Users-samin-farajian-AIOps/assets/usecase-5f98cec7-9469-4400-9c53-d2ef0de84f04.png)
+
+### Use Case 1: Infrastructure Triage & Knowledge Management
+
+When a help request appears in #infrastructure, the agent investigates in seconds:
+
+1. **Correlate Alerts** — Scans #alerts for related warnings, filters noise, and groups them into a summary.
+2. **Check Rootly** — Queries for active or recent incidents on the affected service.
+3. **View Recent Commits** — Looks up recently merged PRs in the service's GitHub repo.
+4. **Search FAQ** — Checks Confluence for an existing runbook or known fix.
+5. **Find Similar Past Issues** — Uses embedding-based semantic search across past Slack help requests, even across different services.
+6. **Draft New FAQ** — If the same issue keeps coming up without documentation, the agent drafts a new Confluence FAQ page for human review.
+
+![Help requests in #infrastructure](/Users/samin.farajian/.cursor/projects/Users-samin-farajian-AIOps/assets/helprequests-da1b579f-55c6-4a6d-b5b9-c29f1327eeb6.png)
+
+![Agent triage reply in Slack thread](/Users/samin.farajian/.cursor/projects/Users-samin-farajian-AIOps/assets/Screenshot_2026-03-02_at_9.11.31_PM-f0b93448-011e-4ae1-9ad6-4114cbd3cb39.png)
+
+![Thread showing how a fix was found and shared](/Users/samin.farajian/.cursor/projects/Users-samin-farajian-AIOps/assets/reply-help-request-6fd87210-97c8-4306-a9bb-cc421980c389.png)
+
+### Use Case 2: Incident Impact & Customer Communication
+
+When a high-severity incident is declared via Rootly:
+
+1. **Query Impact** — Connects to the application database to identify affected users within the incident window.
+2. **Segment Users** — Breaks down impact by account tier (Enterprise, Business, Free).
+3. **Draft Notification** — Writes a tailored customer email using incident context from Rootly and impact data from the database.
+4. **Human Review** — The team reviews tone, verifies data, and sends from the web dashboard.
+
+![Incident lifecycle workflows — customer communication and post-mortem](/Users/samin.farajian/.cursor/projects/Users-samin-farajian-AIOps/assets/Generated_image-4b1b191b-e780-4ef9-8893-840053ec12e7.png)
+
+---
 
 ## Architecture
 
-- **Agent Layer**: Vercel AI SDK with provider-agnostic LLM support (OpenAI, Anthropic, Google)
-- **Tool Providers**: Extensible provider pattern for Slack, Rootly, JIRA, Confluence, GitHub
-- **MCP-Ready**: Built-in adapter layer for future extraction to standalone MCP servers
-- **Human-in-the-Loop**: Verification-first design where AI synthesizes data, humans make decisions
-- **Web UI**: Dashboard for incidents, FAQ management, communications, post-mortems
+![System architecture — entry points, integrations, and outputs](/Users/samin.farajian/.cursor/projects/Users-samin-farajian-AIOps/assets/ARCHITE-150ed06f-41e2-49c4-9720-2d36ce604735.png)
+
+The platform sits between two entry points (**Slack** and **Rootly**) and multiple outputs (Slack replies, customer emails, post-mortem documents). Webhook handlers trigger three core workflows: Infra Triage, Customer Impact, and Post-Mortem Drafting.
+
+Integrations:
+- **LLM Providers** (OpenAI / Anthropic / Google) — entity extraction and content drafting
+- **GitHub** — recent PRs and commit context
+- **Confluence** — FAQ/runbook search and page creation
+- **PostgreSQL** — incident data, embeddings, approvals, communications
+- **Embedding Engine** — semantic similarity matching of past issues
+
+**Slack App** handles real-time triage — the agent replies in threads with interactive summaries and action buttons. **Web UI** handles deeper work — editing FAQ drafts, reviewing customer impact tables, adjusting email tone, and approving post-mortems.
+
+![Web dashboard — pending approvals and recent incidents](/Users/samin.farajian/.cursor/projects/Users-samin-farajian-AIOps/assets/Screenshot_2026-03-02_at_10.52.52_PM-1d5deac7-46dd-448e-96c5-424849ec53a9.png)
+
+---
+
+## Human-in-the-Loop
+
+AI does the fast research. Humans make the final decisions. AIOps gathers alerts, checks Rootly context, finds similar past issues, estimates customer impact, and drafts fixes or emails. Humans decide what is safe to execute, what becomes official documentation, whether impact data is complete, how to escalate high-value customers, and when a customer message is approved and sent. This verification-first model gives speed without losing judgment, risk control, or accountability.
+
+---
 
 ## Getting Started
 
@@ -21,23 +102,15 @@ AI-powered infrastructure operations platform built with Next.js, Vercel AI SDK,
 ### Setup
 
 ```bash
-# Install dependencies
 npm install
-
-# Copy environment variables
 cp .env.example .env.local
-# Edit .env.local with your API keys and configuration
-
-# Push database schema
 npm run db:push
-
-# Start development server
 npm run dev
 ```
 
 ### Environment Variables
 
-See `.env.example` for all available configuration. At minimum, you need:
+See `.env.example` for all options. At minimum:
 
 | Variable | Required | Description |
 |---|---|---|
@@ -51,36 +124,37 @@ See `.env.example` for all available configuration. At minimum, you need:
 | `ATLASSIAN_API_TOKEN` | For JIRA/Confluence | Atlassian API token |
 | `GITHUB_TOKEN` | For GitHub | GitHub personal access token |
 
+---
+
 ## Webhook Configuration
 
 ### Slack App
 
 1. Create a Slack app at https://api.slack.com/apps
-2. Enable Event Subscriptions with URL: `https://your-domain/api/webhooks/slack/events`
+2. Enable Event Subscriptions: `https://your-domain/api/webhooks/slack/events`
 3. Subscribe to `message.channels` events
-4. Enable Interactivity with URL: `https://your-domain/api/webhooks/slack/interactivity`
-5. Required bot scopes: `chat:write`, `channels:history`, `channels:read`, `reactions:read`, `users:read`
-6. Required user scope: `search:read` (needed for `search.messages`)
-7. Set both `SLACK_BOT_TOKEN` (`xoxb-...`) and `SLACK_USER_TOKEN` (`xoxp-...`) in environment variables
+4. Enable Interactivity: `https://your-domain/api/webhooks/slack/interactivity`
+5. Bot scopes: `chat:write`, `channels:history`, `channels:read`, `reactions:read`, `users:read`
+6. User scope: `search:read`
+7. Set `SLACK_BOT_TOKEN` (`xoxb-...`) and `SLACK_USER_TOKEN` (`xoxp-...`)
 
 ### Rootly
 
-1. In Rootly settings, configure a webhook pointing to: `https://your-domain/api/webhooks/rootly`
+1. Configure a webhook: `https://your-domain/api/webhooks/rootly`
 2. Subscribe to incident lifecycle events
+
+---
 
 ## Deploy on Vercel
 
 ```bash
-# Install Vercel CLI
 npm i -g vercel
-
-# Deploy
 vercel
 ```
 
-Or connect your GitHub repo to Vercel for automatic deployments.
+Or connect your GitHub repo for automatic deployments. Set all environment variables in Vercel dashboard under Project Settings > Environment Variables.
 
-Set all environment variables in the Vercel dashboard under Project Settings > Environment Variables. Provision Vercel Postgres (or Neon) from the Vercel Marketplace.
+---
 
 ## Project Structure
 
@@ -92,8 +166,6 @@ src/
   lib/
     agent/                    # AI agent core (model, prompts, tool registry)
     providers/                # Tool providers (slack, rootly, jira, confluence, github)
-      base.ts                 # ToolProvider interface + registry
-      mcp-adapter.ts          # MCP adapter layer
     workflows/                # Business logic (infra-triage, customer-impact, postmortem)
     db/                       # Drizzle ORM schema and queries
   components/                 # React UI components
@@ -107,79 +179,3 @@ src/
 4. The agent automatically gains access to the new tools
 
 No changes needed to the agent core, workflows, or UI.
-
-## Key Workflows
-
-### Infrastructure Triage
-When a help request arrives in the #infrastructure Slack channel:
-1. The agent extracts entities (service, timeframe, symptoms)
-2. Silently investigates: Rootly incidents, alert channels, GitHub changes, FAQ
-3. Posts an interactive Block Kit response with action buttons
-4. Engineers click to expand alert correlation, code changes, or incident details
-
-### Customer Impact Communication
-When a high-severity Rootly incident is declared:
-1. The agent drafts a customer notification email
-2. Creates a human checkpoint for tone review
-3. The team reviews and sends from the dashboard
-
-### Post-Mortem Drafting
-When a Rootly incident is resolved:
-1. The agent gathers incident timeline and context
-2. Drafts a PIR document in Markdown
-3. Creates a human checkpoint for commander approval
-4. Once approved, can be published to Confluence
-
-
-
-## Why This Exists
-
-### The Problem
-
-Imagine a help request lands in your #infrastructure channel: "The payment service is throwing 500 errors." Right now, the on-call engineer has to open five different tabs — scrolling through the alerts channel looking for related warnings, checking Rootly for active incidents, searching GitHub to see if someone merged a change an hour ago, and digging through months of Slack history hoping someone on the team has seen this before. That investigation takes 30 to 45 minutes, and the answer — when they finally find it — is buried in a thread reply. Every time an engineer leaves the team, that hard-won knowledge leaves with them.
-
-### Where Rootly Fits — and Where the Gap Is
-
-[Rootly](https://rootly.com/) is an incident management platform that orchestrates the incident lifecycle: declaring incidents, assigning commanders, tracking severity, coordinating war rooms, and generating timelines. It does this well. But Rootly operates at the *incident* level — it kicks in once something has been formally declared. The gap is everything that happens *before* an incident is declared and *around* it:
-
-- A help request in Slack that hasn't escalated to an incident yet — Rootly doesn't see it.
-- Correlating that help request with 10 noisy alerts firing in a separate channel — Rootly doesn't do this.
-- Searching past Slack threads to find how the team fixed the same problem three months ago — Rootly has no knowledge of this.
-- Checking if a recent GitHub merge caused the regression — outside Rootly's scope.
-- Drafting customer communications based on blast radius data from your application database — Rootly tracks incidents, not customer impact at the user level.
-
-This AI agent fills that gap. It integrates *with* Rootly (querying active incidents, receiving webhooks when incidents are created or resolved) while extending the operational workflow into areas Rootly doesn't cover: pre-incident triage, cross-tool correlation, institutional knowledge retrieval, customer impact analysis, and automated post-mortem drafting.
-
-### Architecture: Slack App + Web UI
-
-The platform is split across two interfaces, each optimized for a different type of decision:
-
-**Slack App (Real-Time Triage)** — The agent lives in Slack as a bot that monitors the #infrastructure channel. When a help request arrives, it performs the full investigation and replies in the thread with an interactive summary: correlated alerts, incident status, recent commits, FAQ matches, and similar past issues. Engineers stay in Slack for fast, in-context decisions — glance, click, act.
-
-**Web UI (Deep Analysis & Editing)** — For tasks that require reading, editing, or reviewing structured data, the agent pushes engineers to the web dashboard. This includes editing AI-drafted FAQ entries before publishing, reviewing customer impact tables with user-level detail, adjusting the tone of drafted communications before sending, and reviewing full post-mortem documents. Slack sends the notification; the web UI is where the real work happens.
-
-The rule is simple: if a decision takes five seconds, do it in Slack. If it requires scrolling, editing, or approving a document, do it in the web UI.
-
-## What the Agent Does
-
-The moment a help request appears in #infrastructure, the agent performs the entire investigation in seconds:
-
-1. **Correlate Related Alerts** — Scans the #alerts channel for warnings and errors within the relevant time window, filters out noise using semantic analysis, and groups them into a correlated summary (e.g., "3x OOMKilled + 2x Lambda Timeout + 1x DB pool exhaustion in the last 45 minutes").
-
-2. **Check for Active Incidents** — Queries Rootly for any active or recently resolved incidents related to the affected service. If a SEV1 incident is already underway, the agent surfaces it immediately so the team knows this help request is part of a larger ongoing fire — no duplicate investigation needed.
-
-3. **View Recent Commits** — Looks up recently merged Pull Requests in the service's GitHub repository, linking directly to the PR so the engineer can see exactly what changed, who authored it, and when it was merged.
-
-4. **Search the FAQ for a Known Fix** — Checks Confluence for an existing runbook or FAQ entry matching the issue. If found, it surfaces the fix inline — complete with the CLI commands — ready for the engineer to review and execute.
-
-5. **Search History of Past Help Requests** — Uses embedding-based semantic similarity to find previous help requests with matching error patterns, even across different services. For each match, it fetches the full thread replies, summarizes how the issue was actually resolved, and provides a direct link back to the original Slack conversation.
-
-6. **Draft a New FAQ Entry** — When the agent detects a recurring pattern, it offers to draft a new FAQ entry pulling resolution steps from those past threads. But it never publishes on its own — a notification in Slack links to the web UI where the infrastructure engineer reviews, edits, and approves it before it becomes the team's official runbook.
-
-Beyond triage, the agent handles two additional workflows triggered by Rootly incident lifecycle events:
-
-7. **Customer Impact & Communication** — When a high-severity incident is declared via Rootly webhook, the agent quantifies the blast radius by querying the application database, segments impacted users by tier, and drafts a customer notification email. The team reviews and sends from the web UI.
-
-8. **Automated Post-Mortem** — When a Rootly incident is resolved, the agent ingests the timeline, alert data, and customer impact to draft a complete Post-Incident Review. Engineers review and publish from the web UI instead of spending hours writing it from scratch.
-
-The core design principle: the AI handles the heavy lifting of investigation and pattern recognition, but the human always retains execution authority — because a fix that's safe on a Tuesday might be dangerous during a Friday deploy freeze. The AI accelerates; the human decides.
