@@ -150,7 +150,7 @@ export function buildTriageResponse(params: {
   if (params.hasRecentChanges) {
     actions.push({
       type: "button",
-      text: { type: "plain_text", text: "Show Recent Changes", emoji: true },
+      text: { type: "plain_text", text: "View Recent Commits", emoji: true },
       action_id: "show_changes",
       value: params.serviceName,
     });

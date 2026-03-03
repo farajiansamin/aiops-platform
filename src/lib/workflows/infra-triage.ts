@@ -199,6 +199,7 @@ export async function runInfraTriage(
           channel,
         },
         slackChannel: channel,
+        threadTs,
       });
     }
   }
@@ -287,15 +288,27 @@ async function fetchAlertChannelHistory(
 async function getServiceRepos(
   serviceName: string,
 ): Promise<Array<{ owner: string; repo: string }>> {
-  const rows = await db
-    .select()
-    .from(schema.serviceRepos)
-    .where(eq(schema.serviceRepos.serviceName, serviceName));
+  const variants = [
+    serviceName,
+    serviceName.replace(/\s+/g, "-"),
+    serviceName.replace(/-/g, " "),
+  ];
 
-  return rows.map((r) => {
-    const [owner, repo] = r.repoFullName.split("/");
-    return { owner, repo };
-  });
+  for (const variant of variants) {
+    const rows = await db
+      .select()
+      .from(schema.serviceRepos)
+      .where(eq(schema.serviceRepos.serviceName, variant));
+
+    if (rows.length > 0) {
+      return rows.map((r) => {
+        const [owner, repo] = r.repoFullName.split("/");
+        return { owner, repo };
+      });
+    }
+  }
+
+  return [];
 }
 
 async function searchAndFetchFAQContent(
@@ -378,7 +391,7 @@ async function fetchRecentChanges(
   minutesAgo: number,
 ) {
   const mergedAfter = new Date(
-    Date.now() - Math.max(minutesAgo, 240) * 60 * 1000,
+    Date.now() - 7 * 24 * 60 * 60 * 1000,
   ).toISOString();
 
   const allChanges: Array<{

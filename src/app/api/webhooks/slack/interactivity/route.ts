@@ -453,10 +453,20 @@ async function handleAnalyzeAlerts(serviceName: string, channel: string, threadT
 }
 
 async function handleShowChanges(serviceName: string, channel: string, threadTs: string) {
-  const repos = await db
-    .select()
-    .from(schema.serviceRepos)
-    .where(eq(schema.serviceRepos.serviceName, serviceName));
+  const variants = [
+    serviceName,
+    serviceName.replace(/\s+/g, "-"),
+    serviceName.replace(/-/g, " "),
+  ];
+
+  let repos: Array<typeof schema.serviceRepos.$inferSelect> = [];
+  for (const variant of variants) {
+    repos = await db
+      .select()
+      .from(schema.serviceRepos)
+      .where(eq(schema.serviceRepos.serviceName, variant));
+    if (repos.length > 0) break;
+  }
 
   const allChanges: Array<{
     prNumber: number;
@@ -468,7 +478,7 @@ async function handleShowChanges(serviceName: string, channel: string, threadTs:
     filesChanged: number;
   }> = [];
 
-  const mergedAfter = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString();
+  const mergedAfter = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
   for (const r of repos) {
     const [owner, repo] = r.repoFullName.split("/");

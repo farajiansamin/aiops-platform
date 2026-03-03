@@ -12,6 +12,7 @@ export async function createHumanCheckpoint(params: {
   summary: string;
   payload: Record<string, unknown>;
   slackChannel?: string;
+  threadTs?: string;
   expiresInMinutes?: number;
 }): Promise<string> {
   const approval = await createApproval({
@@ -40,6 +41,7 @@ export async function createHumanCheckpoint(params: {
     };
 
     await postMessage(params.slackChannel, `AI requests review: ${params.summary}`, {
+      threadTs: params.threadTs,
       blocks: [
         {
           type: "section",
