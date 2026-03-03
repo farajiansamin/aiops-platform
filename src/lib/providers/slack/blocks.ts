@@ -29,6 +29,7 @@ export function buildTriageResponse(params: {
   faqFixContent?: string;
   faqTitle?: string;
   faqUrl?: string;
+  approvalId?: string;
   relatedIncidents: RootlyIncidentSummary[];
   threadTs: string;
 }): Record<string, unknown>[] {
@@ -120,6 +121,24 @@ export function buildTriageResponse(params: {
   // Action buttons
   const actions: Record<string, unknown>[] = [];
 
+  // Approve / Reject when a FAQ fix was found
+  if (params.hasFAQMatch && params.faqFixContent && params.approvalId) {
+    actions.push({
+      type: "button",
+      text: { type: "plain_text", text: "Approve Fix", emoji: true },
+      style: "primary",
+      action_id: "approve_inline",
+      value: params.approvalId,
+    });
+    actions.push({
+      type: "button",
+      text: { type: "plain_text", text: "Reject", emoji: true },
+      style: "danger",
+      action_id: "reject_inline",
+      value: params.approvalId,
+    });
+  }
+
   if (
     params.relatedIncidents.some((i) =>
       ["started", "investigating", "mitigated"].includes(i.status),
@@ -130,7 +149,6 @@ export function buildTriageResponse(params: {
       text: { type: "plain_text", text: "View Incident", emoji: true },
       action_id: "view_incident",
       value: params.relatedIncidents[0]?.id ?? "",
-      style: "danger",
     });
   }
 
@@ -170,7 +188,6 @@ export function buildTriageResponse(params: {
       style: "primary",
     });
   } else {
-    // FAQ was found, but user might still want to browse past issues
     actions.push({
       type: "button",
       text: {
