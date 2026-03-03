@@ -6,35 +6,39 @@ AI-powered infrastructure operations assistant built with Next.js, Vercel AI SDK
 
 ---
 
-## Why This Exists
+## The Problem
 
-### The Problem
+When a help request lands in #infrastructure — "The payment service is throwing 500 errors" — the on-call engineer has to manually check five different places: alerts, Rootly incidents, GitHub merges, Confluence docs, and old Slack threads. That takes 30-45 minutes, and the answer is usually buried in a thread reply from months ago.
 
-Imagine a help request lands in your #infrastructure channel: "The payment service is throwing 500 errors." The on-call engineer has to open five different tabs — scrolling through alerts, checking Rootly for active incidents, searching GitHub for recent merges, and digging through months of Slack history hoping someone has seen this before. That investigation takes 30-45 minutes, and the answer is usually buried in a thread reply. Every time an engineer leaves the team, that knowledge leaves with them.
+![Manual triage — 30-45 minutes across 5 tools](./docs/images/digram-problem-1.png)
 
-![The manual triage problem — 30-45 minutes across 5 tools](./docs/images/problem-manual-triage.png)
+This is what the #infrastructure channel looks like in practice — multiple help requests coming in, each needing the same manual investigation.
 
-Then there's the other side of incidents — the aftermath. After a major outage, the team rushes to fix it. Once things calm down, the same questions come up: How many customers were affected? Which tier? How exactly were they impacted? Answering that means manually querying databases, cross-referencing timestamps, and piecing together which users hit the broken endpoint. Then comes writing a clear message to those customers. Under pressure, this work is slow, error-prone, and often delayed.
+![Help requests in #infrastructure](./docs/images/helprequests.png)
 
-![Incident aftermath — the manual communication challenge](./docs/images/incident-aftermath.png)
+When someone does find the fix, it lives in a Slack thread that only they know about. The next time the same issue happens, the team starts from scratch.
 
-### Where Rootly Fits — and Where the Gap Is
+![A past fix buried in a Slack thread](./docs/images/reply-help-request.png)
 
-[Rootly](https://rootly.com/) orchestrates the incident lifecycle: declaring incidents, assigning commanders, tracking severity, and generating timelines. But Rootly operates at the *incident* level — it kicks in once something has been formally declared. The gap is everything that happens *before* and *around* an incident:
+Then there's the other side — the aftermath. After a major outage, the team rushes to fix it. Once things calm down: How many customers were affected? Which tier? How were they impacted? Answering that means manually querying databases and cross-referencing timestamps. Then comes writing a clear message to those customers. Under pressure, this work is slow, error-prone, and often delayed.
 
-- A help request in Slack that hasn't escalated yet — Rootly doesn't see it.
-- Correlating that request with noisy alerts in a separate channel — Rootly doesn't do this.
-- Searching past Slack threads for how the team fixed the same problem before — outside Rootly's scope.
-- Checking if a recent GitHub merge caused the regression — outside Rootly's scope.
-- Drafting customer communications based on blast radius data — Rootly tracks incidents, not customer impact at the user level.
+![Incident aftermath — the manual communication challenge](./docs/images/inci.png)
 
-AIOps fills that gap. It integrates *with* Rootly (querying active incidents, receiving webhooks) while extending into areas Rootly doesn't cover: pre-incident triage, cross-tool correlation, knowledge retrieval, customer impact analysis, and post-mortem drafting.
+---
+
+## How AIOps Helps
+
+AIOps steps in to handle both problems. It works with [Rootly](https://rootly.com/) (an incident management platform for declaring incidents, tracking severity, and coordinating response) and extends into areas Rootly doesn't cover: pre-incident triage, cross-tool correlation, knowledge retrieval, customer impact analysis, and post-mortem drafting.
+
+![System architecture — entry points, integrations, and outputs](./docs/images/arch.png)
+
+The platform sits between two entry points (**Slack** and **Rootly**) and multiple outputs (Slack replies, customer emails, post-mortem documents). It integrates with LLM providers for drafting, GitHub for recent commits, Confluence for FAQ search and creation, PostgreSQL for data storage, and an embedding engine for semantic matching of past issues.
 
 ---
 
 ## Two Core Use Cases
 
-![Use Case 1: Infrastructure Triage — Use Case 2: Customer Impact & Communication](./docs/images/use-cases.png)
+![Use Case 1: Infrastructure Triage — Use Case 2: Customer Impact & Communication](./docs/images/usecase.png)
 
 ### Use Case 1: Infrastructure Triage & Knowledge Management
 
@@ -47,11 +51,17 @@ When a help request appears in #infrastructure, the agent investigates in second
 5. **Find Similar Past Issues** — Uses embedding-based semantic search across past Slack help requests, even across different services.
 6. **Draft New FAQ** — If the same issue keeps coming up without documentation, the agent drafts a new Confluence FAQ page for human review.
 
-![Help requests in #infrastructure](./docs/images/slack-help-requests.png)
+**Scenario 1 — Known fix found:** The agent detects payment service 500 errors, finds a matching Confluence runbook, pulls recent GitHub commits, and gives the engineer everything they need in one thread reply.
 
-![Agent triage reply in Slack thread](./docs/images/slack-triage-reply.png)
+![Known fix found — FAQ match with recent code changes](./docs/images/slack-known-fix.png)
 
-![Thread showing how a fix was found and shared](./docs/images/thread-resolution.png)
+**Scenario 2 — New issue, no FAQ:** The agent finds no existing documentation for the image-resizing service, correlates alerts (Lambda Timeout + OOM), and offers to search past help requests for similar patterns.
+
+![New issue — alert correlation and similar issue search](./docs/images/3.png)
+
+**Scenario 3 — Recurring pattern, FAQ drafted:** The agent finds similar past issues, suggests a fix based on previous resolutions, and drafts a new Confluence FAQ page for the team to review.
+
+![Similar issues found and FAQ draft created](./docs/images/Generated_image.png)
 
 ### Use Case 2: Incident Impact & Customer Communication
 
@@ -62,24 +72,17 @@ When a high-severity incident is declared via Rootly:
 3. **Draft Notification** — Writes a tailored customer email using incident context from Rootly and impact data from the database.
 4. **Human Review** — The team reviews tone, verifies data, and sends from the web dashboard.
 
-![Incident lifecycle workflows — customer communication and post-mortem](./docs/images/incident-lifecycle.png)
+![Incident lifecycle workflows — customer communication and post-mortem](./docs/images/ARCHITE.png)
+
+The web dashboard shows full incident details with impacted users broken down by tier, ready for review and export.
+
+![Incident detail — impacted users by tier with export option](./docs/images/incident-detail.png)
 
 ---
 
-## Architecture
+## Web Dashboard
 
-![System architecture — entry points, integrations, and outputs](./docs/images/architecture.png)
-
-The platform sits between two entry points (**Slack** and **Rootly**) and multiple outputs (Slack replies, customer emails, post-mortem documents). Webhook handlers trigger three core workflows: Infra Triage, Customer Impact, and Post-Mortem Drafting.
-
-Integrations:
-- **LLM Providers** (OpenAI / Anthropic / Google) — entity extraction and content drafting
-- **GitHub** — recent PRs and commit context
-- **Confluence** — FAQ/runbook search and page creation
-- **PostgreSQL** — incident data, embeddings, approvals, communications
-- **Embedding Engine** — semantic similarity matching of past issues
-
-**Slack App** handles real-time triage — the agent replies in threads with interactive summaries and action buttons. **Web UI** handles deeper work — editing FAQ drafts, reviewing customer impact tables, adjusting email tone, and approving post-mortems.
+The dashboard gives teams a single view of active incidents, pending approvals, and agent status. Slack handles fast, in-context triage; the web UI handles deeper work like editing FAQ drafts, reviewing customer impact tables, and approving post-mortems.
 
 ![Web dashboard — pending approvals and recent incidents](./docs/images/dashboard.png)
 
