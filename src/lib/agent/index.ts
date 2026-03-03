@@ -21,7 +21,7 @@ export function getModel(): LanguageModel {
     const google = createGoogleGenerativeAI({
       apiKey: env.GOOGLE_GENERATIVE_AI_API_KEY,
     });
-    return google("gemini-3-flash-preview");
+    return google("gemini-2.5-flash");
   }
   throw new Error(
     "No LLM API key configured. Set OPENAI_API_KEY, ANTHROPIC_API_KEY, or GOOGLE_GENERATIVE_AI_API_KEY.",
