@@ -14,11 +14,11 @@ When a help request lands in #infrastructure — "The payment service is throwin
 
 This is what the #infrastructure channel looks like in practice — multiple help requests coming in, each needing the same manual investigation.
 
-![Help requests in #infrastructure](./docs/images/helprequests.png)
+<img src="./docs/images/helprequests.png" alt="Help requests in #infrastructure" width="600">
 
 When someone does find the fix, it lives in a Slack thread that only they know about. The next time the same issue happens, the team starts from scratch.
 
-![A past fix buried in a Slack thread](./docs/images/reply-help-request.png)
+<img src="./docs/images/reply-help-request.png" alt="A past fix buried in a Slack thread" width="600">
 
 Then there's the other side — the aftermath. After a major outage, the team rushes to fix it. Once things calm down: How many customers were affected? Which tier? How were they impacted? Answering that means manually querying databases and cross-referencing timestamps. Then comes writing a clear message to those customers. Under pressure, this work is slow, error-prone, and often delayed.
 
@@ -53,7 +53,7 @@ When a help request appears in #infrastructure, the agent investigates in second
 
 **Scenario 1 — Known fix found:** The agent detects payment service 500 errors, finds a matching Confluence runbook, pulls recent GitHub commits, and gives the engineer everything they need in one thread reply.
 
-![Known fix found — FAQ match with recent code changes](./docs/images/slack-known-fix.png)
+<img src="./docs/images/slack-known-fix.png" alt="Known fix found — FAQ match with recent code changes" width="600">
 
 **Scenario 2 — New issue, no FAQ:** The agent finds no existing documentation for the image-resizing service, correlates alerts (Lambda Timeout + OOM), and offers to search past help requests for similar patterns.
 
