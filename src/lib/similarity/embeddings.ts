@@ -108,24 +108,26 @@ export async function findSimilarIssues(
     .from(schema.issueEmbeddings)
     .limit(500);
 
-  const results: SimilarIssue[] = [];
-  const seenDescriptions = new Set<string>();
+  // Collect all matches, then deduplicate
+  const allMatches: Array<SimilarIssue & { stored: typeof storedIssues[0] }> = [];
 
   for (const stored of storedIssues) {
     // Skip self-match (same thread as the current request)
     if (stored.threadTs && stored.threadTs === entities.threadTs) continue;
+
+    // Skip issues from the same channel posted today (likely the user's
+    // own test messages from the current session, not historical data)
+    if (stored.channel && stored.channel === entities.channel) {
+      const ageMs = Date.now() - stored.createdAt.getTime();
+      if (ageMs < 24 * 60 * 60 * 1000) continue;
+    }
 
     const similarity = cosineSimilarity(
       currentEmbedding,
       stored.embedding as number[],
     );
     if (similarity >= SIMILARITY_THRESHOLD) {
-      // Deduplicate by description (first 100 chars)
-      const descKey = stored.description.slice(0, 100);
-      if (seenDescriptions.has(descKey)) continue;
-      seenDescriptions.add(descKey);
-
-      results.push({
+      allMatches.push({
         id: stored.id,
         description: stored.description,
         service: stored.service,
@@ -135,11 +137,28 @@ export async function findSimilarIssues(
         resolvedVia: stored.resolvedVia,
         similarity,
         createdAt: stored.createdAt,
+        stored,
       });
     }
   }
 
-  return results.sort((a, b) => b.similarity - a.similarity);
+  // Deduplicate: keep only the best match per service.
+  // This prevents showing the same checkout-service issue twice
+  // (once from seeded data, once from a Slack message).
+  const bestByService = new Map<string, SimilarIssue>();
+  for (const match of allMatches) {
+    const existing = bestByService.get(match.service);
+    if (!existing || match.similarity > existing.similarity) {
+      const { stored: _stored, ...issue } = match;
+      // Prefer the entry that has a resolvedVia (from seed data)
+      if (existing && !issue.resolvedVia && existing.resolvedVia && Math.abs(match.similarity - existing.similarity) < 0.05) {
+        continue;
+      }
+      bestByService.set(match.service, issue);
+    }
+  }
+
+  return [...bestByService.values()].sort((a, b) => b.similarity - a.similarity);
 }
 
 /**
