@@ -1,6 +1,6 @@
 # AIOps Platform
 
-**[Open Live App](https://aiops-platform.vercel.app)** | **[Watch Demo Video](./AIOps.mp4)**
+**[Open Live App](https://aiops-platform.vercel.app)** | **[Watch Demo Video](https://drive.google.com/file/d/10UAYYRA6l3mVdnfPSxn7CXSfchy7XVWb/view?usp=sharing)**
 
 AI-powered infrastructure operations assistant built with Next.js, Vercel AI SDK, and a hybrid MCP-ready architecture. Integrates with Slack, Rootly, Confluence, GitHub, and JIRA.
 
