@@ -29,7 +29,6 @@ export function buildTriageResponse(params: {
   faqFixContent?: string;
   faqTitle?: string;
   faqUrl?: string;
-  approvalId?: string;
   relatedIncidents: RootlyIncidentSummary[];
   threadTs: string;
 }): Record<string, unknown>[] {
@@ -120,24 +119,6 @@ export function buildTriageResponse(params: {
 
   // Action buttons
   const actions: Record<string, unknown>[] = [];
-
-  // Approve / Reject when a FAQ fix was found
-  if (params.hasFAQMatch && params.faqFixContent && params.approvalId) {
-    actions.push({
-      type: "button",
-      text: { type: "plain_text", text: "Approve Fix", emoji: true },
-      style: "primary",
-      action_id: "approve_inline",
-      value: params.approvalId,
-    });
-    actions.push({
-      type: "button",
-      text: { type: "plain_text", text: "Reject", emoji: true },
-      style: "danger",
-      action_id: "reject_inline",
-      value: params.approvalId,
-    });
-  }
 
   if (
     params.relatedIncidents.some((i) =>

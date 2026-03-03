@@ -2,7 +2,6 @@ import { generateObject, type LanguageModel } from "ai";
 import { z } from "zod/v4";
 import type { ExtractedEntities, TriageContext } from "./types";
 import { correlateAlerts } from "./alert-correlation";
-import { createApproval } from "@/lib/db/queries/approvals";
 import { searchIncidents } from "@/lib/providers/rootly/client";
 import { listRecentPRs } from "@/lib/providers/github/client";
 import {
@@ -157,25 +156,6 @@ export async function runInfraTriage(
   // If NOT found, the agent explicitly says "No similar FAQ entry found"
   // and offers a "Search Previous Related Issues" button.
   if (env.SLACK_BOT_TOKEN) {
-    // If FAQ found, create an approval record so Approve/Reject buttons work
-    let approvalId: string | undefined;
-    if (faqFixContent) {
-      const approval = await createApproval({
-        workflowId: `infra-triage-${threadTs}`,
-        type: "execution_authority",
-        summary: `Suggested fix for "${entities.service}": ${faqTitle ?? "FAQ match"}`,
-        payload: {
-          service: entities.service,
-          fixTitle: faqTitle,
-          fixContent: faqFixContent.slice(0, 500),
-          faqUrl,
-          threadTs,
-          channel,
-        },
-      });
-      approvalId = approval.id;
-    }
-
     const blocks = buildTriageResponse({
       serviceName: entities.service,
       alertCount: context.alertCorrelation?.relatedAlertCount ?? 0,
@@ -185,7 +165,6 @@ export async function runInfraTriage(
       faqFixContent,
       faqTitle,
       faqUrl,
-      approvalId,
       relatedIncidents: context.relatedIncidents.map((i) => ({
         id: i.id,
         title: i.title,
